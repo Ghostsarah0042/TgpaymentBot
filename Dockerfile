@@ -1,10 +1,1 @@
-FROM python:3
-
-WORKDIR /usr/src/app
-
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-CMD [ "python", "./commercecoinbaseTgBot.py" ]
+docker run -it --rm --name my-running-script -v "$PWD":/usr/src/myapp -w /usr/src/myapp arm32v5/python:3 python commercecoinbaseTgBot.py
