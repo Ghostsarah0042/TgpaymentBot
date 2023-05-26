@@ -10,7 +10,7 @@ COPY . /app
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set the default command
-CMD ["python", ".py"]
+CMD ["python", "commercecoinbaseTgBot.py"]
 
 
 
