@@ -1,42 +1,149 @@
 import logging
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import CallbackContext, CommandHandler, Updater
-from coinbase_commerce import Client
+from telegram import Update
+from telegram.ext import Application, CommandHandler, ConversationHandler, MessageHandler, ContextTypes
+from replit import db
 
-# Set up logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
+# Enable logging
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+logger = logging.getLogger(_name_)
 
-# Coinbase Commerce API configuration
-COINBASE_COMMERCE_API_KEY = 'YOUR API KEY'
-coinbase_client = Client(api_key=COINBASE_COMMERCE_API_KEY)
+# Conversation states
+CREATE_ACCOUNT_EMAIL, CREATE_ACCOUNT_PASSWORD, LOGIN_EMAIL, LOGIN_PASSWORD = range(4)
 
-# Telegram bot configuration
-TELEGRAM_BOT_TOKEN = 'YOUR BOT TOKEN'
+# Flag to track login status
+logged_in = False
 
+async def start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Displays info on how to use the bot."""
+    if logged_in:
+        msg = (
+            "Use /select_plan to list the available checkouts.\n"
+            "Use /withdrawal to initiate a withdrawal.\n"
+            "Use /open_ticket to open a support ticket."
+        )
+    else:
+        msg = (
+            "Use /create_account to create a new account.\n"
+            "Use /login to log in to your account."
+        )
+    await update.message.reply_text(msg)
 
-def start(update: Update, context: CallbackContext):
-    """Handler for the /start command."""
-    chat_id = update.effective_chat.id
-    text = "Welcome to the Coinbase Commerce payment bot!\n\nUse the /checkout command to initiate a payment."
-    context.bot.send_message(chat_id=chat_id, text=text)
+async def create_account_start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Starts the create account process and asks for the user's email."""
+    await update.message.reply_text("Please provide your email.")
+    return CREATE_ACCOUNT_EMAIL
 
+async def create_account_email_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Stores the user's email and asks for the password."""
+    email = update.message.text
+    context.user_data["email"] = email
+    await update.message.reply_text("Please provide your password.")
+    return CREATE_ACCOUNT_PASSWORD
 
-def list_checkouts(update: Update, context: CallbackContext):
-    """Handler for the /list_checkouts command."""
-    chat_id = update.effective_chat.id
+async def create_account_password_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Stores the user's password and asks for the verification code."""
+    password = update.message.text
+    context.user_data["password"] = password
+    await update.message.reply_text("Please provide the verification code.")
 
-    try:
-        checkouts = coinbase_client.checkout.list(limit=5)
+    # Store the email and password in the database
+    db["email"] = email
+    db["password"] = password
 
-        if not checkouts:
-            context.bot.send_message(chat_id=chat_id, text="No checkouts found.")
-            return
+    return ConversationHandler.END
 
-        for checkout in checkouts.data:
-            text = f"Checkout ID: {checkout.id}\n\nDescription: {checkout.description}"
-            context.bot.send_photo(chat_id=chat_id, photo=checkout.logo_url, caption=text)
+async def login_start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Starts the login process and asks for the user's email."""
+    await update.message.reply_text("Please enter your email to login.")
+    return LOGIN_EMAIL
 
+async def login_email_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Stores the user's email and asks for the password."""
+    email = update.message.text
+    context.user_data["login_email"] = email
+    await update.message.reply_text("Please enter your password.")
+    return LOGIN_PASSWORD
+
+async def login_password_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Validates the login credentials and prints the login status."""
+    email = context.user_data.get("login_email")
+    password = update.message.text
+
+    # Check if the email and password match the stored account details
+    stored_email = db.get("email")
+    stored_password = db.get("password")
+
+    if email == stored_email and password == stored_password:
+        await update.message.reply_text("Login successful!")
+    else:
+        await update.message.reply_text("Invalid login credentials.")
+
+    return ConversationHandler.END
+
+async def select_plan_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Lists the available checkouts for selecting a plan and provides the description and URL."""
+    # Fetch the available checkouts from your system or API
+    checkouts = [
+        {
+            "name": "Hudson Rivers Starter Trading Bot",
+            "description": "The Hudson Rivers trading bot provides integrated solutions for making trades smooth for you. This bot makes it possible to get returns of up to 1.475% interest daily",
+            "url": "https://cutt.ly/4ww4KvAj"
+        },
+        {
+            "name": "Hudson Rivers Advanced Trading Bot",
+            "description": "The Hudson Rivers advanced trading bot provides integrated solutions for making trades smooth for you. This bot makes it possible to get returns of up to 2.55% interest daily from potential market",
+            "url": "https://cutt.ly/qww4Vqna"
+        },
+        {
+            "name": "Hudson Rivers Professional Trading Bot",
+            "description": "The Hudson Rivers professional trading bot provides integrated solutions for making trades smooth for you. This bot makes it possible to get returns of up to 6.575% interest weekly from the market",
+            "url": "https://cutt.ly/Bww47YgQ"
+        }
+    ]
+
+    # Generate a formatted list of checkouts with their descriptions and URLs
+    checkout_list = "\n\n".join([f"{i + 1}. {c['name']}:\n{c['description']}\nURL: {c['url']}\n" for i, c in enumerate(checkouts)])
+
+    # Send the checkout list to the user
+    await update.message.reply_text(f"Available checkouts:\n\n{checkout_list}")
+
+async def withdrawal_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Initiates a withdrawal by asking for wallet and verification pin."""
+    await update.message.reply_text("Please provide your wallet and verification pin.")
+
+async def open_ticket_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Opens a support ticket by sending a message to the admin."""
+    admin_chat_id = "6008082458"  # Replace with the actual admin chat ID
+    await context.bot.send_message(admin_chat_id, "Please open a support ticket @Dougborden01.")
+
+def main() -> None:
+    """Run the bot."""
+    # Create the Application and pass it your bot's token.
+    application = Application.builder().token("5977373456:AAH8gz-xbuWGRwJ8C2I3zvkp0IQ48Gzy6fM").build()
+
+    # Add command handler for start
+    application.add_handler(CommandHandler("start", start_callback))
+
+    # Add command handler for create_account
+    application.add_handler(CommandHandler("create_account", create_account_start_callback))
+
+    # Add command handler for login
+    application.add_handler(CommandHandler("login", login_start_callback))
+
+    # Add command handler for select_plan
+    application.add_handler(CommandHandler("select_plan", select_plan_callback))
+
+    # Add command handler for withdrawal
+    application.add_handler(CommandHandler("withdrawal", withdrawal_callback))
+
+    # Add command handler for open_ticket
+    application.add_handler(CommandHandler("open_ticket", open_ticket_callback))
+
+    # Run the bot until the user presses Ctrl-C
+    application.run_polling()
+
+if _name_ == "_main_":
+    main()
     except Exception as e:
         context.bot.send_message(chat_id=chat_id, text=f'Error: {str(e)}')
 
