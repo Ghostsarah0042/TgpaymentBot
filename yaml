@@ -1,0 +1,28 @@
+
+**.github/workflows/main.yml**
+```yaml
+name: Python Bot Workflow
+
+on:
+  push:
+    branches:
+      - main  # Change this to the branch you want to trigger the workflow on
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.x  # Replace '3.x' with your desired Python version
+      
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+      
+    - name: Run bot
+      run: python bot.py
