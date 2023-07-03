@@ -1,0 +1,31 @@
+name: Bot Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Set up environment variables
+        run: |
+          echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" >> $GITHUB_ENV
+          echo "LOGGED_IN=${{ secrets.LOGGED_IN }}" >> $GITHUB_ENV
+          echo "ADMIN_CHAT_ID=${{ secrets.ADMIN_CHAT_ID }}" >> $GITHUB_ENV
+
+      - name: Run bot
+        run: python bot.py
