@@ -1,28 +1,33 @@
-
-**.github/workflows/main.yml**
-```yaml
-name: Python Bot Workflow
-
+name: Deploy
 on:
   push:
-    branches:
-      - main  # Change this to the branch you want to trigger the workflow on
+    branches: main
+  pull_request:
+    branches: main
 
 jobs:
-  build:
+  deploy:
+    name: Deploy
     runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+    permissions:
+      id-token: write # Needed for auth with Deno Deploy
+      contents: read # Needed to clone the repository
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.x  # Replace '3.x' with your desired Python version
-      
-    - name: Install dependencies
-      run: pip install -r requirements.txt
-      
-    - name: Run bot
-      run: python bot.py
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
+
+      - name: Build step
+        run: npm install && npm run build # 📝 Update the build command(s)
+
+      - name: Upload to Deno Deploy
+        uses: denoland/deployctl@v1
+        with:
+          project: "hrttradebot"
+          entrypoint: "index.js" # 📝 Update the entrypoint
+          root: "." # 📝 Update the root
