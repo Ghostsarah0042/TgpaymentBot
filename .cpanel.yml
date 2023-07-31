@@ -1,0 +1,8 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/hrtrdkqc/public_html/bot  
+    - /bin/cp -r . $DEPLOYPATH
+    - cd $DEPLOYPATH
+    - /bin/python3 -m pip install -r requirements.txt
+    - /bin/python3 bot.py
