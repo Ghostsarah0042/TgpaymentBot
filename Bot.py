@@ -59,12 +59,12 @@ async def withdrawal_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def open_ticket_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Opens a support ticket by sending a message to the admin."""
-    admin_chat_id = os.getenv("ADMIN_CHAT_ID")
+    admin_chat_id = os.getenv("6008082458")
     await context.bot.send_message(admin_chat_id, "Please open a support ticket @Dougborden01.")
 
 def main() -> None:
     """Run the bot."""
-    bot_token = os.getenv("BOT_TOKEN")
+    bot_token = os.getenv("5977373456:AAH8gz-xbuWGRwJ8C2I3zvkp0IQ48Gzy6fM")  # Replace with your bot API token
     application = Application.builder().token(bot_token).build()
 
     application.add_handler(CommandHandler("start", start_callback))
